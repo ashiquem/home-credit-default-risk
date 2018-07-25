@@ -47,7 +47,7 @@ class modeltraining:
         train,test = train.align(test,join='inner',axis=1)
         
         # for storing feature importances
-        features = [train.columns]
+        features = list(train.columns)
         ft_importances = np.zeros(len(features))
         
         # converting to numpy array for lgbm consumptions
@@ -97,7 +97,7 @@ class modeltraining:
             
             # storing feature importances
             
-            ft_importances += (clf.feature_importances_) /kfold.n_splits
+            ft_importances += clf.feature_importances_ /kfold.n_splits
             
             # freeing up memory
             del xtrain,ytrain,xvalid,yvalid,clf
