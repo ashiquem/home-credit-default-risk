@@ -1,4 +1,7 @@
 import pandas as pd
+import numpy as np
+import gc
+gc.enable()
 
 class Extractor:
     """Functions for computing feature statistics on pandas dataframes"""
@@ -72,5 +75,54 @@ class Extractor:
         categorical_stats.columns = columns
 
         return categorical_stats
+
+    def apptrain_test_data(self,df,test):
+        allapps = df.append(test).reset_index(drop=True)
+
+        #null days employed anomaly
+        allapps['DAYS_EMPLOYED'].replace(365243,np.nan,inplace=True)
+        #create new features
+        allapps['CREDIT_ANNUITY_RATIO'] = allapps['AMT_CREDIT']/allapps['AMT_ANNUITY']
+        allapps['CREDIT_INCOME_RATIO'] = allapps['AMT_CREDIT']/allapps['AMT_INCOME_TOTAL']
+        allapps['ANNUITY_INCOME_RATIO'] = allapps['AMT_ANNUITY']/allapps['AMT_INCOME_TOTAL']
+        allapps['AGE_CAR_AGE_RATIO'] = allapps['DAYS_BIRTH']/allapps['OWN_CAR_AGE']
+        allapps['GOODS_PRICE_INCOME_RATIO'] = allapps['AMT_GOODS_PRICE']/allapps['AMT_INCOME_TOTAL']
+        allapps['INCOME_FAMILY'] = allapps['AMT_INCOME_TOTAL']/(allapps['CNT_FAM_MEMBERS'] + allapps['CNT_CHILDREN'])
+        allapps['EXT_SOURCES_MEAN'] = allapps[['EXT_SOURCE_1', 'EXT_SOURCE_2', 'EXT_SOURCE_3']].mean(axis=1)
+        allapps['EXT_SOURCES_PROD'] = allapps['EXT_SOURCE_1'] * allapps['EXT_SOURCE_2'] * allapps['EXT_SOURCE_3']
+        allapps['RR_MEAN'] = allapps[['REGION_RATING_CLIENT', 'REGION_RATING_CLIENT_W_CITY']].mean(axis=1)
+        allapps['EMPLPYOED_TO_AGE'] = allapps['DAYS_EMPLOYED']/allapps['DAYS_BIRTH']
+
+        del test
+        gc.collect()
+        print('Saving dataframe....')
+        allapps.to_csv('processed/testtrain.csv',index=False)
+        return allapps
+
+    def previous_applications(self,pa):
+
+        #null anomalies
+        pa['DAYS_FIRST_DRAWING'].replace(365243,np.nan,inplace=True)
+        pa['DAYS_FIRST_DUE'].replace(365243,np.nan,inplace=True)
+        pa['DAYS_LAST_DUE_1ST_VERSION'].replace(365243,np.nan,inplace=True)
+        pa['DAYS_LAST_DUE'].replace(365243,np.nan,inplace=True)
+        pa['DAYS_TERMINATION'].replace(365243,np.nan,inplace=True)
+
+        #creating features
+        pa['CREDIT_TO_APP'] = pa['AMT_CREDIT']/pa['AMT_APPLICATION']
+        pa['PA_CREDIT_ANNUITY'] = pa['AMT_CREDIT']/pa['AMT_ANNUITY']
+
+        p_apps_numerical = self.numerical_feature_stats(pa,'SK_ID_CURR','prv_app',exclude=['SK_ID_PREV'])
+        p_app_cat = self.categorical_stats(pa,'SK_ID_CURR','prv_app',exclude=['SK_ID_PREV'])
+        
+        p_app_cat.to_csv('processed/p_apps_cat.csv',index=False)
+        p_apps_numerical.to_csv('processed/p_apps_num.csv',index=False)
+
+        del pa
+        gc.collect()
+
+        return p_app_cat, p_apps_numerical
+
+
 
 

@@ -11,7 +11,7 @@ class modeltraining:
        machine learning models
      """
 
-    def train_predict_lgbm(self,train,test,folds,iterations):
+    def train_predict_lgbm(self,train,test,folds,iterations,exclude=[]):
         """Function to train a Gradient Boosted Model,
            based on the lightgbm library.
 
@@ -21,6 +21,7 @@ class modeltraining:
            test(pandas dataframe): testing dataset
            folds(integer): number of folds to use for k-fold cross validation
            iterations(integer): number of iterations used for early stopping criteria 
+           exclude(list string): column names to exclude from dataset
 
            Returns:
            --------
@@ -36,8 +37,8 @@ class modeltraining:
         # save target labels
         labels = train['TARGET']
         # drop unnecessary columns
-        train = train.drop(columns=['SK_ID_CURR','TARGET'])
-        test = test.drop(columns=['SK_ID_CURR'])
+        train = train.drop(columns=['SK_ID_CURR','TARGET']+exclude)
+        test = test.drop(columns=['SK_ID_CURR']+exclude)
 
         # encode categorical variables
         train = pd.get_dummies(train)
