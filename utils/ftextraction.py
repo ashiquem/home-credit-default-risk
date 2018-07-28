@@ -6,77 +6,102 @@ gc.enable()
 class Extractor:
     """Functions for computing feature statistics on pandas dataframes"""
 
-    def numerical_feature_stats(self,df,gb,df_name,exclude=[]):
-        """Function to calculative cumulative statistics for numerical features
-        
+    def rename_columns(self,groupby,df,df_name):
+        """Function to rename pandas dataframe with aggregated statistics
+           
            Parameters:
-           ----------
-           df(pandas dataframe): features dataframe
-           gb(string): feature to groupby for cumulative stats
-           df_name(string): dataset name for renaming columns
-           exclude(list of string): feature names to exclude from calculations
+           -----------
+           groupby(string): column name used to group
+           df(pandas dataframe): dataframe to be renames
+           df_name(string): dataset name
+
+           Returns:
+
+           df(pandas datafram): dataframe with renamed columns 
+        
+        """
+
+        col_names = [groupby]
+
+        for col in df.columns.levels[0]:
+            if col != groupby:
+                for stat in df[col].columns:
+                    col_names.append('%s_%s_%s'%(df_name,col,stat))
+
+        df.columns = col_names
+        return df
+
+    def encode_categorical(self,df):
+        """Function to encode categorical features
+           Uses label encoding for features with <=2 unique labels
+           Uses one-hot-encoding for the rest.
+
+           Parameters:
+           -----------
+           df(pandas dataframe): dataset to encode
 
            Returns:
            --------
-           numerical_stats(pandas dataframe): dataframe containing aggregated
-                                        cumulative statistics of numerical features 
+           cat_cols(list of string): column names of encoded features
+           df(pandas dataframe): encoded dataset
         """
-
-        for col in df:
-            if col in exclude:
-                df = df.drop(columns=col)
-
-        numerical_stats = df.select_dtypes('number')
-
-        numerical_stats = numerical_stats.groupby(gb,as_index=False).agg(['count','mean','max','min','sum']).reset_index()
-        columns = [gb]
-
-        for feature in numerical_stats.columns.levels[0]:
-            if feature != gb:
-                for stat in numerical_stats.columns.levels[1][:-1]:
-                    columns.append('%s_%s_%s'%(df_name,feature,stat))
-            
-        numerical_stats.columns = columns
-
-        return numerical_stats
-
-
-    def categorical_stats(self,df,gb,df_name,exclude=[]):
-        """Extracts counts and normalized counts of categorical features
+        all_cols = list(df.columns)
+        cat_cols = []
+        #binary encoding:
+        for col in df.select_dtypes('object'):
+            if(len(df[col].unique())<=2):
+                df[col],uniques = pd.factorize(df[col])
+                cat_cols.append(col)
         
-           Parameters:
-           ----------
-           df(pandas dataframe): features dataframe
-           gb(string): feature to groupby for cumulative stats - ID expected to be of type number
-           df_name(string): dataset name for renaming columns
-           exclude(list of string): feature names to exclude from calculations
-
-           Returns:
-           --------
-           categorical_stats(pandas dataframe): dataframe containing aggregated
-                                                cumulative statistics of categorical features       
-        """
+        #one-hot-encoding:
+        
+        df = pd.get_dummies(df,columns=list(df.select_dtypes('object')))
         for col in df.columns:
-            if col in exclude:
-                df.drop(columns=col)
+            if col not in all_cols:
+                cat_cols.append(col)
+                
+        return cat_cols,df
 
-        categorical_stats = pd.get_dummies(df.select_dtypes('object'))
-        categorical_stats[gb] = df[gb]
+    
 
-        categorical_stats = categorical_stats.groupby(gb).agg(['sum','mean']).reset_index()
+    def aggregate_stats(self,gb,df,df_name=""):
+        """Function to compute aggregate statistics
+           
+           Parameters:
+           -----------
+           gb(string): feature to aggregate by
+           df(pandas dataframe): dataset to perform operation on
 
-        columns = [gb]
+           Returns:
+           --------
+           df(pandas dataframe): dataset with aggregated stats
+        """
 
-        for col in categorical_stats.columns.levels[0]:
-            if col != gb:
-                for stat in ['count','norm_count']:
-                    columns.append('%s_%s_%s' %(df_name,col,stat))
+        #numerical columns:
+        num_cols = list(df.select_dtypes('number').columns)
+        #define numerical aggregations:
+        num_aggs = {}
+        for c in num_cols:
+            if c != gb:
+                num_aggs[c] = ['mean','max','min','count','sum']
+        
+        #encode categorical features:
+        cat_cols,df = self.encode_categorical(df)
 
-        categorical_stats.columns = columns
+        #define categorical aggregations:
+        cat_aggs = {}
+        for c in cat_cols: cat_aggs[c]=['count','mean']
+        
+        #compute grouped aggregate stats:
+        df = df.groupby(gb).agg({**num_aggs,**cat_aggs}).reset_index()
+        
+        #renamedf
+        df = self.rename_columns(gb,df,df_name)
 
-        return categorical_stats
+        return df
 
-    def apptrain_test_data(self,df,test):
+
+    def apptrain_test_data(self,df,test,path=''):
         allapps = df.append(test).reset_index(drop=True)
 
         #null days employed anomaly
@@ -95,11 +120,14 @@ class Extractor:
 
         del test
         gc.collect()
-        print('Saving dataframe....')
-        allapps.to_csv('processed/testtrain.csv',index=False)
+
+        if path != '':
+            print(f'Saving dataframe to {path}')
+            allapps.to_csv(f'{path}',index=False)
+
         return allapps
 
-    def previous_applications(self,pa):
+    def previous_applications(self,pa,path=''):
 
         #null anomalies
         pa['DAYS_FIRST_DRAWING'].replace(365243,np.nan,inplace=True)
@@ -112,16 +140,121 @@ class Extractor:
         pa['CREDIT_TO_APP'] = pa['AMT_CREDIT']/pa['AMT_APPLICATION']
         pa['PA_CREDIT_ANNUITY'] = pa['AMT_CREDIT']/pa['AMT_ANNUITY']
 
-        p_apps_numerical = self.numerical_feature_stats(pa,'SK_ID_CURR','prv_app',exclude=['SK_ID_PREV'])
-        p_app_cat = self.categorical_stats(pa,'SK_ID_CURR','prv_app',exclude=['SK_ID_PREV'])
+        #aggregate stats:
+        pa.drop(columns='SK_ID_PREV',inplace=True)
+        pa = self.aggregate_stats('SK_ID_CURR',pa,'PA')
+
+        if path != '':
+            print(f'Saving dataframe to {path}')
+            pa.to_csv(f'{path}',index=False)
+
+
+        return pa
+
+    def bureau_and_balance(self,buro,bb,path=''):
+        #aggregate statistics on bureau balance:
+        bb_agg = self.aggregate_stats('SK_ID_BUREAU',bb,'BB')
+        del bb
+        gc.collect()
+
+        #join to bureau data:
+        buro = pd.merge(buro,bb_agg,on='SK_ID_BUREAU',how='left')
         
-        p_app_cat.to_csv('processed/p_apps_cat.csv',index=False)
-        p_apps_numerical.to_csv('processed/p_apps_num.csv',index=False)
+        #drop bureau balance id:
+        buro.drop(columns='SK_ID_BUREAU',inplace=True)
+
+        #aggregate statistics on bureau data:
+        buro_agg = self.aggregate_stats('SK_ID_CURR',buro,'BURO')
+
+        del buro
+        gc.collect()
+
+        if path != '':
+            print(f'Saving dataframe to {path}')
+            buro_agg.to_csv(f'{path}',index=False)
+
+        return buro_agg
+
+    def installment_payments(self,df,pa,path=''):
+        #aggregate stats by previous applications:
+        df.drop(columns='SK_ID_CURR',inplace=True)
+        ipay_prv = self.aggregate_stats('SK_ID_PREV',df,'ipay')
+        
+        del df
+        gc.collect()
+
+        #aggregate stats by current load ID
+        ipay_prv = pd.merge(pa,ipay_prv,on='SK_ID_PREV',how='left')
+        ipay_prv.drop(columns='SK_ID_PREV',inplace=True)
+        ipay_prv = self.aggregate_stats('SK_ID_CURR',ipay_prv,'client')
 
         del pa
         gc.collect()
 
-        return p_app_cat, p_apps_numerical
+        if path != '':
+            print(f'Saving dataframe to {path}')
+            ipay_prv.to_csv(f'{path}',index=False)
+
+        return ipay_prv
+
+    def cc_balance(self,df,pa,path=''):
+        #aggregate stats by previous applications
+        df.drop(columns='SK_ID_CURR',inplace=True)
+        ccb = self.aggregate_stats('SK_ID_PREV',df,'ccb')
+        
+        del df
+        gc.collect()
+
+        #aggregate by current loan ID
+        ccb = pd.merge(pa,ccb,on='SK_ID_PREV',how='left')
+        ccb.drop(columns='SK_ID_PREV',inplace=True)
+        ccb = self.aggregate_stats('SK_ID_CURR',ccb,'client')
+
+        del pa
+        gc.collect()
+
+        if path != '':
+            print(f'Saving dataframe to {path}')
+            ccb.to_csv(f'{path}',index=False)
+
+
+        return ccb
+
+    def pos_cash_balance(self,df,pa,path=''):
+        #aggregate by previous applications:
+        df.drop(columns='SK_ID_CURR',inplace=True)
+        pos = self.aggregate_stats('SK_ID_PREV',df,'pos')
+
+        del df
+        gc.collect()
+
+        #aggregate by current load ID
+        pos = pd.merge(pa,pos,on='SK_ID_PREV',how='left')
+        pos.drop(columns='SK_ID_PREV',inplace=True)
+        pos = self.aggregate_stats('SK_ID_CURR',pos,'client')
+
+        del pa
+        gc.collect()
+
+        if path != '':
+            print(f'Saving dataframe to {path}')
+            pos.to_csv(f'{path}',index=False)
+
+
+        return pos
+
+    def drop_missing_values(self,df,threshold):
+        missing = df.isnull().sum()
+        count = missing[missing !=0]
+        percent = (count/len(df)*100).round(1)
+        missing = pd.concat([count,percent],axis=1,keys=['Count','Percent'])
+
+        to_drop = list(missing[missing['Percent']>threshold].index)
+        print('Dropping %d columns....'%len(to_drop))
+        df.drop(columns=to_drop,inplace=True)
+        
+        return df
+
 
 
 
