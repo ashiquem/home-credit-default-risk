@@ -4,12 +4,14 @@ import lightgbm as lgbm
 from sklearn.model_selection import KFold
 from sklearn.metrics import roc_auc_score
 import gc
+import ftextraction
 gc.enable()
 
 class modeltraining:
     """Methods for training and testing different 
        machine learning models
      """
+    
 
     def train_predict_lgbm(self,train,test,folds,iterations,exclude=[]):
         """Function to train a Gradient Boosted Model,
@@ -31,19 +33,24 @@ class modeltraining:
 
         """
         #PREPROCESSING DATA
-        
+        self.process = ftextraction.Extractor()
         # save test IDs for final submission dataframe
         test_IDs = test['SK_ID_CURR']
         # save target labels
         labels = train['TARGET']
-        # drop unnecessary columns
-        train = train.drop(columns=['SK_ID_CURR','TARGET']+exclude)
-        test = test.drop(columns=['SK_ID_CURR']+exclude)
+        # drop ID columns
+        train = train.drop(columns=['SK_ID_CURR','TARGET'])
+        test = test.drop(columns=['SK_ID_CURR'])
+
 
         # encode categorical variables
-        train = pd.get_dummies(train)
-        test = pd.get_dummies(test)
+        cols,train = self.process.encode_categorical(train)
+        colst, test = self.process.encode_categorical(train)
         
+        # drop features with no importance
+        train.drop(columns=exclude,inplace=True)
+        test.drop(columns=exlude,inplace=True)
+
         # aligining dataframes
         train,test = train.align(test,join='inner',axis=1)
         
@@ -75,7 +82,7 @@ class modeltraining:
             
             # creating the classifier 
             clf = lgbm.LGBMClassifier(n_estimators=10000, objective = 'binary', 
-                                    class_weight = 'balanced', learning_rate = 0.05, 
+                                    class_weight = 'balanced', learning_rate = 0.06, 
                                     reg_alpha = 0.1, reg_lambda = 0.1, 
                                     subsample = 0.8, n_jobs = -1, random_state = 50)
             

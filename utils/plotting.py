@@ -17,7 +17,7 @@ class Visualizations:
         fi_df(dataframe): pandas dataframe containing the features importances
         """
 
-        top_features = fi_df[fi_df['importance'] != 0].head(20)
+        top_features = fi_df[fi_df['importance'] != 0].sort_values('importance',ascending=False).head(20)
         figure = plt.figure(figsize=(8,10))
         sns.barplot(x='importance',y='features',data=top_features)
         plt.tight_layout
