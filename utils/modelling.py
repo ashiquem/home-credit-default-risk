@@ -4,7 +4,7 @@ import lightgbm as lgbm
 from sklearn.model_selection import KFold
 from sklearn.metrics import roc_auc_score
 import gc
-import ftextraction
+from utils import ftextraction
 gc.enable()
 
 class modeltraining:
@@ -45,11 +45,11 @@ class modeltraining:
 
         # encode categorical variables
         cols,train = self.process.encode_categorical(train)
-        colst, test = self.process.encode_categorical(train)
+        colst, test = self.process.encode_categorical(test)
         
         # drop features with no importance
         train.drop(columns=exclude,inplace=True)
-        test.drop(columns=exlude,inplace=True)
+        test.drop(columns=exclude,inplace=True)
 
         # aligining dataframes
         train,test = train.align(test,join='inner',axis=1)
@@ -82,8 +82,10 @@ class modeltraining:
             
             # creating the classifier 
             clf = lgbm.LGBMClassifier(n_estimators=10000, objective = 'binary', 
-                                    class_weight = 'balanced', learning_rate = 0.06, 
-                                    reg_alpha = 0.1, reg_lambda = 0.1, 
+                                    class_weight = 'balanced', learning_rate = 0.02, 
+                                    reg_alpha = 0.041545473, reg_lambda = 0.0735294, num_leaves = 34,
+                                    colsample_bytree = 0.9497036, min_split_gain=0.0222415,
+                                    min_child_weight=39.3259775,
                                     subsample = 0.8, n_jobs = -1, random_state = 50)
             
             # fitting on the training set, early stopping using validation set
@@ -119,7 +121,7 @@ class modeltraining:
         cv_score['Training Score'] = cv_roc_train
         cv_score['Validation Score'] = cv_roc_valid
         overall = roc_auc_score(labels,oof_predictions)
-        print('Overall CV Score: %.2f' %overall)
+        print('Overall CV Score: %.4f' %overall)
         # submission dataframe:
         submission = pd.DataFrame({'SK_ID_CURR': test_IDs, 'TARGET': test_preds})
         
