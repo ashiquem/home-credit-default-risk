@@ -4,7 +4,7 @@ import lightgbm as lgbm
 from sklearn.model_selection import KFold
 from sklearn.metrics import roc_auc_score
 import gc
-from utils import ftextraction
+import ftextraction
 gc.enable()
 
 class modeltraining:

@@ -101,22 +101,23 @@ class Extractor:
         return df
 
 
-    def apptrain_test_data(self,df,test,path=''):
+    def apptrain_test_data(self,df,test,path='',fe=True):
         allapps = df.append(test).reset_index(drop=True)
 
         #null days employed anomaly
         allapps['DAYS_EMPLOYED'].replace(365243,np.nan,inplace=True)
-        #create new features
-        allapps['CREDIT_ANNUITY_RATIO'] = allapps['AMT_CREDIT']/allapps['AMT_ANNUITY']
-        allapps['CREDIT_INCOME_RATIO'] = allapps['AMT_CREDIT']/allapps['AMT_INCOME_TOTAL']
-        allapps['ANNUITY_INCOME_RATIO'] = allapps['AMT_ANNUITY']/allapps['AMT_INCOME_TOTAL']
-        allapps['AGE_CAR_AGE_RATIO'] = allapps['DAYS_BIRTH']/allapps['OWN_CAR_AGE']
-        allapps['GOODS_PRICE_INCOME_RATIO'] = allapps['AMT_GOODS_PRICE']/allapps['AMT_INCOME_TOTAL']
-        allapps['INCOME_FAMILY'] = allapps['AMT_INCOME_TOTAL']/(allapps['CNT_FAM_MEMBERS'] + allapps['CNT_CHILDREN'])
-        allapps['EXT_SOURCES_MEAN'] = allapps[['EXT_SOURCE_1', 'EXT_SOURCE_2', 'EXT_SOURCE_3']].mean(axis=1)
-        allapps['EXT_SOURCES_PROD'] = allapps['EXT_SOURCE_1'] * allapps['EXT_SOURCE_2'] * allapps['EXT_SOURCE_3']
-        allapps['RR_MEAN'] = allapps[['REGION_RATING_CLIENT', 'REGION_RATING_CLIENT_W_CITY']].mean(axis=1)
-        allapps['EMPLPYOED_TO_AGE'] = allapps['DAYS_EMPLOYED']/allapps['DAYS_BIRTH']
+        if fe == True:
+            #create new features
+            allapps['CREDIT_ANNUITY_RATIO'] = allapps['AMT_CREDIT']/allapps['AMT_ANNUITY']
+            allapps['CREDIT_INCOME_RATIO'] = allapps['AMT_CREDIT']/allapps['AMT_INCOME_TOTAL']
+            allapps['ANNUITY_INCOME_RATIO'] = allapps['AMT_ANNUITY']/allapps['AMT_INCOME_TOTAL']
+            allapps['AGE_CAR_AGE_RATIO'] = allapps['DAYS_BIRTH']/allapps['OWN_CAR_AGE']
+            allapps['GOODS_PRICE_INCOME_RATIO'] = allapps['AMT_GOODS_PRICE']/allapps['AMT_INCOME_TOTAL']
+            allapps['INCOME_FAMILY'] = allapps['AMT_INCOME_TOTAL']/(allapps['CNT_FAM_MEMBERS'] + allapps['CNT_CHILDREN'])
+            allapps['EXT_SOURCES_MEAN'] = allapps[['EXT_SOURCE_1', 'EXT_SOURCE_2', 'EXT_SOURCE_3']].mean(axis=1)
+            allapps['EXT_SOURCES_PROD'] = allapps['EXT_SOURCE_1'] * allapps['EXT_SOURCE_2'] * allapps['EXT_SOURCE_3']
+            allapps['RR_MEAN'] = allapps[['REGION_RATING_CLIENT', 'REGION_RATING_CLIENT_W_CITY']].mean(axis=1)
+            allapps['EMPLPYOED_TO_AGE'] = allapps['DAYS_EMPLOYED']/allapps['DAYS_BIRTH']
 
         del test
         gc.collect()
@@ -127,7 +128,7 @@ class Extractor:
 
         return allapps
 
-    def previous_applications(self,pa,path=''):
+    def previous_applications(self,pa,path='',fe=True):
 
         #null anomalies
         pa['DAYS_FIRST_DRAWING'].replace(365243,np.nan,inplace=True)
@@ -136,9 +137,10 @@ class Extractor:
         pa['DAYS_LAST_DUE'].replace(365243,np.nan,inplace=True)
         pa['DAYS_TERMINATION'].replace(365243,np.nan,inplace=True)
 
-        #creating features
-        pa['CREDIT_TO_APP'] = pa['AMT_CREDIT']/pa['AMT_APPLICATION']
-        pa['PA_CREDIT_ANNUITY'] = pa['AMT_CREDIT']/pa['AMT_ANNUITY']
+        if fe == True:
+            #create new features
+            pa['CREDIT_TO_APP'] = pa['AMT_CREDIT']/pa['AMT_APPLICATION']
+            pa['PA_CREDIT_ANNUITY'] = pa['AMT_CREDIT']/pa['AMT_ANNUITY']
 
         #aggregate stats:
         pa.drop(columns='SK_ID_PREV',inplace=True)

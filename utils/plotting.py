@@ -1,5 +1,7 @@
 import matplotlib.pyplot as plt
 import seaborn as sns
+import numpy as np
+import math
 
 class Visualizations:
     """Functions for creating plots
@@ -24,7 +26,7 @@ class Visualizations:
         plt.title('Feature Importances')
 
     
-    def plot_bars(self,data,features,target_label):
+    def plot_bars(self,data,features,target_label,path=''):
         """create bar plots for features
         parameters:
         ------------
@@ -51,9 +53,13 @@ class Visualizations:
             plt.bar(ind2, defaulters.values,width,color='yellow',alpha=0.9)
             plt.xticks(ind1+0.25,list(repaid.index),rotation=45)
             plt.title(f'Loan Repayment in terms of {feature}')
-            plt.legend(labels=['Repayed','Defaulted'])    
+            plt.legend(labels=['Repayed','Defaulted'])
+
+
+            if path != '':
+                plt.savefig(path)
     
-    def plot_distributions(self,dataframe,features,target_label):
+    def plot_distributions(self,dataframe,features,target_label,xlabels=[],ylabels=[]):
         """create KDE plots for features
         parameters:
         ------------
@@ -66,4 +72,10 @@ class Visualizations:
             plt.subplot(rows,3,i+1)
             sns.kdeplot(dataframe.loc[dataframe[target_label] ==0,feature],label='Repayed')
             sns.kdeplot(dataframe.loc[dataframe[target_label]==1,feature],label='Defaulted')
-            plt.title(f'Distribution of {feature}')    
+            plt.title(f'Distribution of {feature}')
+            if len(xlabels) != 0:
+                plt.xlabel(xlabels[i])
+            if len(ylabels) != 0:
+                plt.ylabel(ylabels[i])
+
+                
