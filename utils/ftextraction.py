@@ -31,7 +31,7 @@ class Extractor:
         df.columns = col_names
         return df
 
-    def encode_categorical(self,df):
+    def encode_categorical(self,df,nan_col=True):
         """Function to encode categorical features
            Uses label encoding for features with <=2 unique labels
            Uses one-hot-encoding for the rest.
@@ -39,7 +39,7 @@ class Extractor:
            Parameters:
            -----------
            df(pandas dataframe): dataset to encode
-
+           nan_col(bool): true to include nans as columns
            Returns:
            --------
            cat_cols(list of string): column names of encoded features
@@ -55,7 +55,7 @@ class Extractor:
         
         #one-hot-encoding:
         
-        df = pd.get_dummies(df,columns=list(df.select_dtypes('object')))
+        df = pd.get_dummies(df,columns=list(df.select_dtypes('object')),dummy_na=nan_col)
         for col in df.columns:
             if col not in all_cols:
                 cat_cols.append(col)
