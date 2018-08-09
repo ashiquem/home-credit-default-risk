@@ -119,6 +119,9 @@ class Extractor:
             allapps['RR_MEAN'] = allapps[['REGION_RATING_CLIENT', 'REGION_RATING_CLIENT_W_CITY']].mean(axis=1)
             allapps['EMPLPYOED_TO_AGE'] = allapps['DAYS_EMPLOYED']/allapps['DAYS_BIRTH']
 
+        #encode categorical features
+        catcols, allapps = self.encode_categorical(allapps)
+
         del test
         gc.collect()
 
