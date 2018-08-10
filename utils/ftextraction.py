@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import gc
+import time
 gc.enable()
 
 class Extractor:
@@ -260,7 +261,42 @@ class Extractor:
         
         return df
 
+    def process_datasets(self,apptrain,apptest,buro,bb,pa,ipay,ccb,pos,fe=True,path=''):
+        """Process all datasets
+           
+           Parameters:
+           -----------
+           apptrain,apptest,buro,bb,pa,ipay,ccb,pos(pandas dataframe): datasets
+           fe(boolean): True procesess with engineered features
+           path(string): path to save processed file
+        
+        """
+        start = time.time()
+        print('Aggregating data sets....')
+        #encoding and aggregating datasets
+        appdata = self.apptrain_test_data(apptrain,apptest,fe=fe)
+        buro_data = self.bureau_and_balance(buro,bb)
+        paIds = pa[['SK_ID_PREV','SK_ID_CURR']]
+        pa = self.previous_applications(pa,fe=fe)
+        ipay = self.installment_payments(ipay,paIds)
+        ccb = self.cc_balance(ccb,paIds)
+        pos = self.pos_cash_balance(pos,paIds)
+        end = time.time()
+        print('Aggregation done in %.2f minutes '%((end-start)/60))
+        del apptrain, apptest, buro, bb
+        gc.collect()
 
+        print('Joining datasets.... ')
+        start = time.time()
+        #joining datasets
+        appdata = pd.merge(appdata,buro_data,on='SK_ID_CURR',how='left')
+        appdata = pd.merge(appdata,pa,on='SK_ID_CURR',how='left')
+        appdata = pd.merge(appdata,ipay,on='SK_ID_CURR',how='left')
+        appdata = pd.merge(appdata,ccb,on='SK_ID_CURR',how='left')
+        appdata = pd.merge(appdata,pos,on='SK_ID_CURR',how='left')
+        end = time.time()
+        print('Merge done in %.2f minutes '%((end-start)/60))
+        if path != '':
+            appdata.to_csv(path,index=False)
 
-
-
+        return appdata
