@@ -4,7 +4,6 @@ import lightgbm as lgbm
 from sklearn.model_selection import KFold
 from sklearn.metrics import roc_auc_score
 import gc
-from utils import ftextraction
 gc.enable()
 
 class modeltraining:
@@ -32,8 +31,6 @@ class modeltraining:
            feature_importances(pandas dataframe): feature importances for the model
 
         """
-        #PREPROCESSING DATA
-        self.process = ftextraction.Extractor()
         # save test IDs for final submission dataframe
         test_IDs = test['SK_ID_CURR']
         # save target labels
@@ -42,10 +39,6 @@ class modeltraining:
         train = train.drop(columns=['SK_ID_CURR','TARGET'])
         test = test.drop(columns=['SK_ID_CURR'])
 
-
-        # encode categorical variables
-        cols,train = self.process.encode_categorical(train)
-        colst, test = self.process.encode_categorical(test)
         
         # drop features with no importance
         train.drop(columns=exclude,inplace=True)
