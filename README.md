@@ -1,5 +1,6 @@
-# Udacity-MLND-Casptone
-Capstone project for Udacity Machine Learning Engineer Nanodegree
+# Home Credit Default Risk
+
+A data science project which explores solutions to the credit default risk problem. I used this project as the capstone for my Udacity Machine Learning Engineer Nanodegree
 
 [Home Credit Default Risk](https://www.kaggle.com/c/home-credit-default-risk) prediction project.
 
